@@ -5,13 +5,16 @@ shopping-cart library called **ShopCart**. There are two identical implementatio
 same repo — **Python** and **Java** — so pick whichever language you're most comfortable
 in.
 
-The interview has two parts:
+The interview is really **one main task with an optional bonus**:
 
-1. **Debugging (~35 min)** — The library ships with a failing test suite. Six bugs have
-   been planted (four easy, two subtle). Find and fix them until the tests are green.
-2. **Feature (~20 min)** — Once tests pass, add a new feature. This part is open-ended:
-   use any external resources you like (docs, Google, StackOverflow, AI assistants such
-   as Copilot/ChatGPT/Claude, etc.). We care about how you approach the problem.
+1. **Debugging (the whole interview)** — The library ships with a failing test suite. Six
+   bugs have been planted. Find and fix them until the tests are green. None of them are
+   one-liners that scream at you — they're the kind of plausible-looking code that quietly
+   does the wrong thing, so take your time and reason carefully.
+2. **Add a Feature (extra credit)** — *Only if you finish the debugging comfortably early*
+   (roughly, all tests green in under 30 minutes) we'll spend the remaining time adding a
+   small feature together. This is a bonus, not a requirement — a thorough, well-narrated
+   debugging pass is the main thing we're evaluating.
 
 We're not looking for perfection. We want to see how you read unfamiliar code, form
 hypotheses, verify them, and communicate as you go. **Think out loud.**
@@ -59,7 +62,7 @@ mvn test                            # compiles and runs the tests
 
 ---
 
-## Part 1 — Debugging (~35 min)
+## Part 1 — Debugging (the main task)
 
 1. Run the test suite. You should see multiple failures.
 2. Read the failing tests to understand the *intended* behavior (each assertion has a
@@ -68,19 +71,33 @@ mvn test                            # compiles and runs the tests
    method's docstring/Javadoc states what it should do — and fix the bugs.
 4. Re-run until everything is green.
 
-There are **six** planted bugs: **four are easy to spot** from a single failing test, and
-**two are subtler** — they only surface on an edge case, so the failing test won't point
-straight at the buggy line. Fix the source, **not** the tests.
+There are **six** planted bugs, and **none of them are loud** — there are no crashes or
+wildly-wrong values to point the way. Each is a plausible implementation that quietly
+disagrees with the method's docstring: think counting the wrong thing, comparing the wrong
+quantity, money that loses its cents, a "merge" that overwrites instead of accumulating, or
+a comparison that's off by an inclusive boundary. The **docstring on each method states
+what it is supposed to do** — the bug is always a mismatch between that description and the
+code.
+
+The tests come in two waves: *Wave 1* is catchable from a careful read of the docstring;
+*Wave 2* only bites on an edge case (fractional money, a repeated product, or a value that
+lands exactly on a boundary). Fix the source, **not** the tests.
 
 **As you work, tell us:** what does the failing test expect, what did you observe, what's
 your hypothesis, and how did the fix confirm it?
 
 ---
 
-## Part 2 — Add a Feature (~20 min)
+## Part 2 — Add a Feature (extra credit — only if you finish early)
 
-Once the suite is green, pick **one** feature below (or propose your own) and implement it,
-**including at least one test**.
+**This part is a bonus.** We only reach it if you've finished the debugging comfortably
+early — as a rough rule of thumb, all tests green in **under 30 minutes** with time to
+spare. If debugging takes the whole session, that's completely fine; a careful, well-
+narrated debugging pass is what we're really evaluating. Don't rush Part 1 to get here.
+
+If we do have time: pick **one** feature below (or propose your own) and implement it,
+**including at least one test**. Reach for whatever tools and references you'd normally use
+(docs, Google, StackOverflow, AI assistants such as Copilot/ChatGPT/Claude, etc.).
 
 - **Coupon codes.** Add `apply_coupon(code)` that maps known codes (e.g. `"SAVE10"`) to a
   discount rate and applies it in `total()`; unknown codes do nothing.

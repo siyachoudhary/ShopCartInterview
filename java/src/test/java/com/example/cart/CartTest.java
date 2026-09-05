@@ -11,76 +11,95 @@ import org.junit.jupiter.api.Test;
  * Behavioral tests for ShopCart. These describe the *intended* behavior.
  * Fix the source in Cart.java until they all pass — do not change the tests.
  *
- * There are 6 planted bugs: 4 easy to spot from a single failing test, and 2 subtler ones
- * that only bite on an edge case. Each assertion carries a message describing the intended
- * behavior.
+ * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+ * absurd value — every one is a plausible-looking implementation that quietly disagrees with
+ * the Javadoc. Read the method's Javadoc (it states the intended behavior), then read the
+ * code, and find the mismatch. The tests come in two waves:
+ *
+ *   - Wave 1: a careful read of the Javadoc is enough to spot the mismatch.
+ *   - Wave 2: the bug only bites on an edge case (fractional money, a repeated product, or a
+ *     value that lands exactly on a boundary).
+ *
+ * Each assertion carries a message describing the intended behavior.
  */
 class CartTest {
 
     // -----------------------------------------------------------------------
-    // The 4 easier bugs
+    // Wave 1 — read the Javadoc carefully
     // -----------------------------------------------------------------------
 
     @Test
     void unitCountSumsQuantities() {
-        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5.
+        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5, even
+        // though there are only 2 lines.
         Cart c = new Cart();
         c.addItem("apple", 1.00, 2);
         c.addItem("banana", 0.50, 3);
         assertEquals(5, c.unitCount(),
-                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products");
+                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products (2)");
     }
 
     @Test
-    void subtotalMultipliesPriceByQuantity() {
-        // Each line contributes unitPrice * quantity.
+    void mostExpensiveComparesUnitPriceNotLineTotal() {
+        // most_expensive returns the line with the highest UNIT price. A cheap item bought
+        // in bulk must NOT outrank a single expensive one: gum is $1 each (x10) but steak is
+        // $9 each, so steak is the most expensive item.
         Cart c = new Cart();
-        c.addItem("apple", 2.00, 2);   // 4.00
-        c.addItem("banana", 1.50, 2);  // 3.00
-        assertEquals(7.00, c.subtotal(), 1e-9,
-                "subtotal() should add unitPrice * quantity per line (4.00 + 3.00 = 7.00), not just prices");
-    }
-
-    @Test
-    void mostExpensiveReturnsHighestPriced() {
-        Cart c = new Cart();
-        c.addItem("gum", 1.00);
-        c.addItem("steak", 9.00);
-        c.addItem("bread", 3.00);
+        c.addItem("gum", 1.00, 10);
+        c.addItem("steak", 9.00, 1);
+        c.addItem("bread", 3.00, 1);
         assertEquals("steak", c.mostExpensive().getName(),
-                "mostExpensive() should return the priciest line ('steak' at 9.00), not the cheapest");
+                "mostExpensive() should compare unit prices (steak at 9.00 each), not line totals "
+                        + "(10 units of gum is a bigger line total but gum is still the cheaper item)");
     }
 
     @Test
-    void totalAppliesDiscountAsMoneyOff() {
-        // A discount rate of 0.2 = "20% off"; pay 80% of a 10.00 subtotal.
+    void totalAppliesDiscountAsARate() {
+        // A discount rate of 0.2 = "20% off"; pay 80% of a 10.00 subtotal. The rate is a
+        // FRACTION of the subtotal, not a flat dollar amount subtracted.
         Cart c = new Cart();
         c.addItem("book", 10.00);  // quantity 1 -> subtotal 10.00
         assertEquals(8.00, c.total(0.2), 1e-9,
-                "total(0.2) should charge 80% of subtotal (10.00 * (1 - 0.2) = 8.00); 0.2 is taken OFF");
+                "total(0.2) should charge 80% of subtotal (10.00 * (1 - 0.2) = 8.00); 0.2 is a rate, "
+                        + "so it is NOT 10.00 - 0.2 = 9.80");
     }
 
     // -----------------------------------------------------------------------
-    // The 2 harder bugs (edge cases)
+    // Wave 2 — edge cases: fractional money, repeats, boundaries
     // -----------------------------------------------------------------------
 
     @Test
-    void addingSameProductMergesIntoOneLine() {
-        // Adding the same product twice should update the existing line, not add a second
-        // line. The subtotal can look right either way, so check the line itself.
+    void subtotalKeepsFractionalCents() {
+        // subtotal sums unitPrice * quantity in EXACT dollars. Fractional cents must survive:
+        // 3 @ 2.50 is exactly 7.50, plus 1 @ 1.00 is 8.50. Truncating each line to whole
+        // dollars would report 8.00.
+        Cart c = new Cart();
+        c.addItem("pear", 2.50, 3);   // 7.50
+        c.addItem("roll", 1.00, 1);   // 1.00
+        assertEquals(8.50, c.subtotal(), 1e-9,
+                "subtotal() should keep fractional dollars (7.50 + 1.00 = 8.50); it must not round or "
+                        + "truncate line totals to whole dollars (which would give 8.00)");
+    }
+
+    @Test
+    void addingSameProductAccumulatesQuantity() {
+        // Adding the same product twice should ADD to the existing line's quantity, not add a
+        // second line and not overwrite the quantity with the latest value. A merge that
+        // *replaces* the quantity still leaves one line, so check the quantity itself.
         Cart c = new Cart();
         c.addItem("apple", 1.00, 2);
         c.addItem("apple", 1.00, 3);
         assertEquals(1, c.getItems().size(),
-                "adding 'apple' twice should leave ONE line, but a duplicate line was created");
+                "adding 'apple' twice should leave ONE line, not a duplicate");
         assertEquals(5, c.getItem("apple").getQuantity(),
-                "the merged 'apple' line should carry the combined quantity (2 + 3 = 5)");
+                "the merged 'apple' line should carry the COMBINED quantity (2 + 3 = 5); overwriting "
+                        + "it with the latest quantity (3) loses the earlier units");
     }
 
     @Test
     void freeShippingIsInclusiveAtThreshold() {
-        // Free shipping kicks in once the subtotal REACHES the threshold; exactly equal
-        // must qualify.
+        // Free shipping kicks in once the subtotal REACHES the threshold; exactly equal must
+        // qualify.
         Cart c = new Cart();
         c.addItem("widget", 50.00);  // quantity 1 -> subtotal exactly 50.00
         assertTrue(c.freeShipping(50.00),
@@ -90,7 +109,7 @@ class CartTest {
     }
 
     // -----------------------------------------------------------------------
-    // Correct behavior (kept as clean reference points)
+    // Correct behavior (these pass out of the box — clean reference points)
     // -----------------------------------------------------------------------
 
     @Test

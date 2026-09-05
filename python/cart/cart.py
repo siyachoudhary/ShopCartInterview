@@ -26,9 +26,13 @@ class Cart:
     def add_item(self, name, unit_price, quantity=1):
         """Add units of a product to the cart.
 
-        If the product is already in the cart, increase that line's quantity instead of
-        creating a second line for the same product.
+        If the product is already in the cart, ADD the new units to that line's existing
+        quantity (accumulate) instead of creating a second line or replacing the quantity.
         """
+        existing = self.get_item(name)
+        if existing is not None:
+            existing.quantity = quantity
+            return existing
         self.items.append(Item(name, unit_price, quantity))
         return self.items[-1]
 
@@ -48,21 +52,28 @@ class Cart:
         return len(self.items)
 
     def subtotal(self):
-        """Sum of unit_price * quantity across every line."""
-        return sum(item.unit_price for item in self.items)
+        """Sum of unit_price * quantity across every line, in exact dollars.
+
+        Don't round or drop fractional cents: a line of 3 @ 2.50 contributes exactly 7.50.
+        """
+        return sum(int(item.unit_price * item.quantity) for item in self.items)
 
     def most_expensive(self):
-        """Return the line item with the highest unit price, or None if the cart is empty."""
+        """Return the line item with the highest UNIT price, or None if the cart is empty.
+
+        This compares unit prices, not line totals: a cheap item bought in bulk does not
+        outrank a single expensive one.
+        """
         if not self.items:
             return None
-        return min(self.items, key=lambda item: item.unit_price)
+        return max(self.items, key=lambda item: item.unit_price * item.quantity)
 
     def total(self, discount_rate=0.0):
         """Subtotal after applying a discount rate in [0, 1].
 
         A rate of 0.2 means "20% off", i.e. the customer pays 80% of the subtotal.
         """
-        return self.subtotal() * discount_rate
+        return self.subtotal() - discount_rate
 
     def free_shipping(self, threshold):
         """True if the subtotal qualifies for free shipping.

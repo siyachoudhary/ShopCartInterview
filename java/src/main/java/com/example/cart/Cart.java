@@ -19,10 +19,16 @@ public class Cart {
     }
 
     /**
-     * Add units of a product to the cart. If the product is already in the cart, increase
-     * that line's quantity instead of creating a second line for the same product.
+     * Add units of a product to the cart. If the product is already in the cart, ADD the
+     * new units to that line's existing quantity (accumulate) instead of creating a second
+     * line or replacing the quantity.
      */
     public Item addItem(String name, double unitPrice, int quantity) {
+        Item existing = getItem(name);
+        if (existing != null) {
+            existing.setQuantity(quantity);
+            return existing;
+        }
         Item item = new Item(name, unitPrice, quantity);
         items.add(item);
         return item;
@@ -52,23 +58,30 @@ public class Cart {
         return items.size();
     }
 
-    /** Sum of unitPrice * quantity across every line. */
+    /**
+     * Sum of unitPrice * quantity across every line, in exact dollars. Don't round or drop
+     * fractional cents: a line of 3 @ 2.50 contributes exactly 7.50.
+     */
     public double subtotal() {
         double sum = 0.0;
         for (Item item : items) {
-            sum += item.getUnitPrice();
+            sum += (int) (item.getUnitPrice() * item.getQuantity());
         }
         return sum;
     }
 
-    /** Return the line item with the highest unit price, or null if the cart is empty. */
+    /**
+     * Return the line item with the highest UNIT price, or null if the cart is empty. This
+     * compares unit prices, not line totals: a cheap item bought in bulk does not outrank a
+     * single expensive one.
+     */
     public Item mostExpensive() {
         if (items.isEmpty()) {
             return null;
         }
         Item best = items.get(0);
         for (Item item : items) {
-            if (item.getUnitPrice() < best.getUnitPrice()) {
+            if (item.getUnitPrice() * item.getQuantity() > best.getUnitPrice() * best.getQuantity()) {
                 best = item;
             }
         }
@@ -80,7 +93,7 @@ public class Cart {
      * i.e. the customer pays 80% of the subtotal.
      */
     public double total(double discountRate) {
-        return subtotal() * discountRate;
+        return subtotal() - discountRate;
     }
 
     /**

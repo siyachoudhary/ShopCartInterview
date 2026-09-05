@@ -3,10 +3,16 @@
 These describe the *intended* behavior. Fix the source in cart/cart.py until they all
 pass — do not change the tests.
 
-There are 6 planted bugs: 4 are easy to spot from a single failing test, and 2 are
-subtler (they only bite on an edge case). Each assertion carries a message describing the
-intended behavior, so a failure tells you what the method should do — not just how two
-values differ.
+There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+absurd value — every one is a plausible-looking implementation that quietly disagrees with
+the docstring. Read the method's docstring (it states the intended behavior), then read the
+code, and find the mismatch. The tests come in two waves:
+
+  * Wave 1 — a careful read of the docstring is enough to spot the mismatch.
+  * Wave 2 — the bug only bites on an edge case (fractional money, a repeated product, or a
+    value that lands exactly on a boundary).
+
+Each assertion carries a message describing the intended behavior.
 """
 
 import pytest
@@ -15,71 +21,77 @@ from cart import Cart
 
 
 # ---------------------------------------------------------------------------
-# The 4 easier bugs
+# Wave 1 — read the docstring carefully
 # ---------------------------------------------------------------------------
 
 def test_unit_count_sums_quantities():
     # unit_count should count individual UNITS, not distinct products. Two products with
-    # quantities 2 and 3 means 5 units in the cart.
+    # quantities 2 and 3 means 5 units in the cart, even though there are only 2 lines.
     c = Cart()
     c.add_item("apple", 1.00, quantity=2)
     c.add_item("banana", 0.50, quantity=3)
     assert c.unit_count() == 5, (
         "unit_count() should sum every line's quantity (2 + 3 = 5), not count the number "
-        "of distinct products"
+        "of distinct products (which would be 2)"
     )
 
 
-def test_subtotal_multiplies_price_by_quantity():
-    # Each line contributes unit_price * quantity to the subtotal.
+def test_most_expensive_compares_unit_price_not_line_total():
+    # most_expensive returns the line with the highest UNIT price. A cheap item bought in
+    # bulk must NOT outrank a single expensive one: gum is $1 each (x10 = $10 of gum) but
+    # steak is $9 each, so steak is the most expensive *item*.
     c = Cart()
-    c.add_item("apple", 2.00, quantity=2)   # 4.00
-    c.add_item("banana", 1.50, quantity=2)  # 3.00
-    assert c.subtotal() == 7.00, (
-        "subtotal() should add up unit_price * quantity for every line (4.00 + 3.00 = "
-        "7.00), not just the unit prices"
-    )
-
-
-def test_most_expensive_returns_highest_priced():
-    # most_expensive returns the line with the HIGHEST unit price.
-    c = Cart()
-    c.add_item("gum", 1.00)
-    c.add_item("steak", 9.00)
-    c.add_item("bread", 3.00)
+    c.add_item("gum", 1.00, quantity=10)
+    c.add_item("steak", 9.00, quantity=1)
+    c.add_item("bread", 3.00, quantity=1)
     assert c.most_expensive().name == "steak", (
-        "most_expensive() should return the priciest line ('steak' at 9.00), not the "
-        "cheapest"
+        "most_expensive() should compare unit prices (steak at 9.00 each wins), not line "
+        "totals (10 units of gum is a bigger line total but gum is still the cheaper item)"
     )
 
 
-def test_total_applies_discount_as_money_off():
+def test_total_applies_discount_as_a_rate():
     # A discount rate of 0.2 = "20% off", so the customer pays 80% of a 10.00 subtotal.
+    # The rate is a FRACTION of the subtotal, not a flat dollar amount subtracted.
     c = Cart()
     c.add_item("book", 10.00)  # quantity 1 -> subtotal is 10.00
     assert c.total(0.2) == 8.00, (
-        "total(0.2) should charge 80% of the subtotal (10.00 * (1 - 0.2) = 8.00); a rate "
-        "of 0.2 is the amount taken OFF, not the amount paid"
+        "total(0.2) should charge 80% of the subtotal (10.00 * (1 - 0.2) = 8.00); 0.2 is a "
+        "rate, so it is NOT 10.00 - 0.2 = 9.80"
     )
 
 
 # ---------------------------------------------------------------------------
-# The 2 harder bugs (edge cases)
+# Wave 2 — edge cases: fractional money, repeats, boundaries
 # ---------------------------------------------------------------------------
 
-def test_adding_same_product_merges_into_one_line():
-    # Adding the same product twice should update the existing line's quantity, not create
-    # a second line for it. (The subtotal can look correct either way, so check the line
-    # itself.)
+def test_subtotal_keeps_fractional_cents():
+    # subtotal sums unit_price * quantity in EXACT dollars. Fractional cents must survive:
+    # 3 @ 2.50 is exactly 7.50, plus 1 @ 1.00 is 8.50. A subtotal that drops the fraction
+    # (e.g. truncating each line to whole dollars) would report 8.00.
+    c = Cart()
+    c.add_item("pear", 2.50, quantity=3)   # 7.50
+    c.add_item("roll", 1.00, quantity=1)   # 1.00
+    assert c.subtotal() == 8.50, (
+        "subtotal() should keep fractional dollars (7.50 + 1.00 = 8.50); it must not round "
+        "or truncate line totals to whole dollars (which would give 8.00)"
+    )
+
+
+def test_adding_same_product_accumulates_quantity():
+    # Adding the same product twice should ADD to the existing line's quantity, not create a
+    # second line and not overwrite the quantity with the latest value. (A merge that
+    # *replaces* the quantity still leaves one line, so check the quantity itself.)
     c = Cart()
     c.add_item("apple", 1.00, quantity=2)
     c.add_item("apple", 1.00, quantity=3)
     assert len(c.items) == 1, (
-        "adding 'apple' twice should leave ONE line for it, but a duplicate line was "
-        f"created (found {len(c.items)} lines)"
+        "adding 'apple' twice should leave ONE line for it, not a duplicate "
+        f"(found {len(c.items)} lines)"
     )
     assert c.get_item("apple").quantity == 5, (
-        "the merged 'apple' line should carry the combined quantity (2 + 3 = 5)"
+        "the merged 'apple' line should carry the COMBINED quantity (2 + 3 = 5); overwriting "
+        "it with the latest quantity (3) loses the earlier units"
     )
 
 
@@ -96,7 +108,7 @@ def test_free_shipping_is_inclusive_at_the_threshold():
 
 
 # ---------------------------------------------------------------------------
-# Correct behavior (kept as clean reference points)
+# Correct behavior (these pass out of the box — clean reference points)
 # ---------------------------------------------------------------------------
 
 def test_add_and_get_item():

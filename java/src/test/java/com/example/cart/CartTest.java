@@ -12,13 +12,14 @@ import org.junit.jupiter.api.Test;
  * Fix the source in Cart.java until they all pass — do not change the tests.
  *
  * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
- * absurd value — every one is a plausible-looking implementation that quietly disagrees with
- * the Javadoc. Read the method's Javadoc (it states the intended behavior), then read the
- * code, and find the mismatch. The tests come in two waves:
+ * absurd value — every one is a plausible-looking implementation that quietly does the wrong
+ * thing. Read the method's Javadoc (it states the intended behavior), then read the code.
+ * Most bugs are a mismatch between those two, but don't assume it every time: a failing test
+ * does not always point at the method it is named for, and one root cause can redden more
+ * than one test. The tests come in two waves:
  *
- *   - Wave 1: a careful read of the Javadoc is enough to spot the mismatch.
- *   - Wave 2: the bug only bites on an edge case (fractional money, a repeated product, or a
- *     value that lands exactly on a boundary).
+ *   - Wave 1: a careful read of the Javadoc is enough to spot the problem.
+ *   - Wave 2: the bug only bites on a particular input or edge case.
  *
  * Each assertion carries a message describing the intended behavior.
  */
@@ -94,6 +95,35 @@ class CartTest {
         assertEquals(5, c.getItem("apple").getQuantity(),
                 "the merged 'apple' line should carry the COMBINED quantity (2 + 3 = 5); overwriting "
                         + "it with the latest quantity (3) loses the earlier units");
+    }
+
+    @Test
+    void removeCheaperThanDropsEveryCheapLine() {
+        // Every line priced under the cutoff should go, however many there are. NOTE: the
+        // order these are added in is load-bearing — keep candy and gum adjacent.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50);
+        c.addItem("gum", 1.00);
+        c.addItem("steak", 9.00);
+        c.removeCheaperThan(2.00);
+        assertEquals(1, c.getItems().size(),
+                "removeCheaperThan(2.00) should drop EVERY line under 2.00 (both candy and gum), "
+                        + "leaving only steak");
+        assertEquals("steak", c.getItems().get(0).getName(), "the surviving line should be 'steak'");
+    }
+
+    @Test
+    void subtotalReflectsPrunedLines() {
+        // After pruning, the subtotal should reflect only the lines that survived. NOTE: the
+        // order these are added in is load-bearing — keep candy and gum adjacent.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50);
+        c.addItem("gum", 1.00);
+        c.addItem("steak", 9.00);
+        c.removeCheaperThan(2.00);
+        assertEquals(9.00, c.subtotal(), 1e-9,
+                "after dropping every line under 2.00 only the 9.00 steak should remain, so the "
+                        + "subtotal is 9.00");
     }
 
     @Test

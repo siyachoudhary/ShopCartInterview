@@ -37,15 +37,28 @@ class Cart:
         return self.items[-1]
 
     def get_item(self, name):
-        """Return the line item for the given product name, or None if it isn't here."""
+        """Return the cart's line for the given product, or None if it isn't here.
+
+        This is the live line item, not a snapshot — callers may mutate the returned object
+        to change what's in the cart.
+        """
         for item in self.items:
             if item.name == name:
-                return item
+                return Item(item.name, item.unit_price, item.quantity)
         return None
 
     def remove_item(self, name):
         """Remove the line for the given product (a no-op if it isn't here)."""
         self.items = [item for item in self.items if item.name != name]
+
+    def remove_cheaper_than(self, price):
+        """Drop every line whose UNIT price is below `price`.
+
+        Lines priced at exactly `price` are kept.
+        """
+        for item in self.items:
+            if item.unit_price < price:
+                self.items.remove(item)
 
     def unit_count(self):
         """Total number of individual units in the cart (sum of every line's quantity)."""

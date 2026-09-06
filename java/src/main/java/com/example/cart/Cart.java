@@ -38,11 +38,15 @@ public class Cart {
         return addItem(name, unitPrice, 1);
     }
 
-    /** Return the line item for the given product name, or null if it isn't here. */
+    /**
+     * Returns the cart's line for the given product, or null if it isn't here. This is the
+     * live line item, not a snapshot — callers may mutate the returned object to change
+     * what's in the cart.
+     */
     public Item getItem(String name) {
         for (Item item : items) {
             if (item.getName().equals(name)) {
-                return item;
+                return new Item(item.getName(), item.getUnitPrice(), item.getQuantity());
             }
         }
         return null;
@@ -51,6 +55,18 @@ public class Cart {
     /** Remove the line for the given product (a no-op if it isn't here). */
     public void removeItem(String name) {
         items.removeIf(item -> item.getName().equals(name));
+    }
+
+    /**
+     * Drops every line whose UNIT price is below {@code price}. Lines priced at exactly
+     * {@code price} are kept.
+     */
+    public void removeCheaperThan(double price) {
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i).getUnitPrice() < price) {
+                items.remove(i);
+            }
+        }
     }
 
     /** Total number of individual units in the cart (sum of every line's quantity). */

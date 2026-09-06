@@ -27,7 +27,7 @@ class Cart:
         """Add units of a product to the cart.
 
         If the product is already in the cart, ADD the new units to that line's existing
-        quantity (accumulate) instead of creating a second line or replacing the quantity.
+        quantity (accumulate).
         """
         existing = self.get_item(name)
         if existing is not None:
@@ -53,16 +53,11 @@ class Cart:
 
     def subtotal(self):
         """Sum of unit_price * quantity across every line, in exact dollars.
-
-        Don't round or drop fractional cents: a line of 3 @ 2.50 contributes exactly 7.50.
         """
         return sum(int(item.unit_price * item.quantity) for item in self.items)
 
     def most_expensive(self):
         """Return the line item with the highest UNIT price, or None if the cart is empty.
-
-        This compares unit prices, not line totals: a cheap item bought in bulk does not
-        outrank a single expensive one.
         """
         if not self.items:
             return None
@@ -70,8 +65,6 @@ class Cart:
 
     def total(self, discount_rate=0.0):
         """Subtotal after applying a discount rate in [0, 1].
-
-        A rate of 0.2 means "20% off", i.e. the customer pays 80% of the subtotal.
         """
         return self.subtotal() - discount_rate
 

@@ -25,18 +25,6 @@ from cart import Cart
 # Wave 1 — read the docstring carefully
 # ---------------------------------------------------------------------------
 
-def test_unit_count_sums_quantities():
-    # unit_count should count individual UNITS, not distinct products. Two products with
-    # quantities 2 and 3 means 5 units in the cart, even though there are only 2 lines.
-    c = Cart()
-    c.add_item("apple", 1.00, quantity=2)
-    c.add_item("banana", 0.50, quantity=3)
-    assert c.unit_count() == 5, (
-        "unit_count() should sum every line's quantity (2 + 3 = 5), not count the number "
-        "of distinct products (which would be 2)"
-    )
-
-
 def test_most_expensive_compares_unit_price_not_line_total():
     # most_expensive returns the line with the highest UNIT price. A cheap item bought in
     # bulk must NOT outrank a single expensive one: gum is $1 each (x10 = $10 of gum) but
@@ -136,9 +124,45 @@ def test_free_shipping_is_inclusive_at_the_threshold():
     assert c.free_shipping(60.00) is False, "a 50.00 subtotal should NOT qualify for a 60.00 threshold"
 
 
+def test_bogo_discount_credits_one_free_unit_per_deal():
+    # "Buy 2, get one free": the customer pays for 2 and takes home a 3rd. Three units is
+    # exactly one complete deal, so one unit is free.
+    c = Cart()
+    c.add_item("candy", 0.50, quantity=3)
+    assert c.bogo_discount(2) == 0.50, (
+        "3 units under a buy-2-get-one-free deal is one complete deal, so exactly one "
+        "0.50 unit is free"
+    )
+
+
+def test_bogo_discount_needs_paid_units_for_every_free_one():
+    # Each free unit has to be accompanied by `buy` PAID units, so a deal consumes 3 units
+    # in total. 6 units of gum is two complete deals (2 free), not three.
+    c = Cart()
+    c.add_item("gum", 1.00, quantity=6)
+    c.add_item("steak", 9.00, quantity=1)
+    c.add_item("candy", 0.50, quantity=3)
+    assert c.bogo_discount(2) == 2.50, (
+        "6 gum is 2 free (not 3 — each free unit needs 2 paid ones beside it), 1 steak "
+        "earns nothing, and 3 candy is 1 free: 2.00 + 0.00 + 0.50 = 2.50"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Correct behavior (these pass out of the box — clean reference points)
 # ---------------------------------------------------------------------------
+
+def test_unit_count_sums_quantities():
+    # unit_count should count individual UNITS, not distinct products. Two products with
+    # quantities 2 and 3 means 5 units in the cart, even though there are only 2 lines.
+    c = Cart()
+    c.add_item("apple", 1.00, quantity=2)
+    c.add_item("banana", 0.50, quantity=3)
+    assert c.unit_count() == 5, (
+        "unit_count() should sum every line's quantity (2 + 3 = 5), not count the number "
+        "of distinct products (which would be 2)"
+    )
+
 
 def test_add_and_get_item():
     c = Cart()

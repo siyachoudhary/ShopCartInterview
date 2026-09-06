@@ -62,7 +62,7 @@ class Cart:
 
     def unit_count(self):
         """Total number of individual units in the cart (sum of every line's quantity)."""
-        return len(self.items)
+        return sum(item.quantity for item in self.items)
 
     def subtotal(self):
         """Sum of unit_price * quantity across every line, in exact dollars.
@@ -75,6 +75,19 @@ class Cart:
         if not self.items:
             return None
         return max(self.items, key=lambda item: item.unit_price * item.quantity)
+
+    def bogo_discount(self, buy=2):
+        """Value of the free units earned by a "buy N, get one free" deal, applied per line.
+
+        The customer pays for `buy` units and receives one more free, so every free unit
+        needs `buy` paid units alongside it. Only complete deals count. Leftover units earn
+        nothing. Each free unit is credited at that product's unit price.
+        """
+        discount = 0.0
+        for item in self.items:
+            free_units = item.quantity // buy
+            discount += free_units * item.unit_price
+        return discount
 
     def total(self, discount_rate=0.0):
         """Subtotal after applying a discount rate in [0, 1].

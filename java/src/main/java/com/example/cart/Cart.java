@@ -71,7 +71,11 @@ public class Cart {
 
     /** Total number of individual units in the cart (sum of every line's quantity). */
     public int unitCount() {
-        return items.size();
+        int count = 0;
+        for (Item item : items) {
+            count += item.getQuantity();
+        }
+        return count;
     }
 
     /**
@@ -108,6 +112,21 @@ public class Cart {
      * Subtotal after applying a discount rate in [0, 1]. A rate of 0.2 means "20% off",
      * i.e. the customer pays 80% of the subtotal.
      */
+    /**
+     * Value of the free units earned by a "buy N, get one free" deal, applied per line. The
+     * customer pays for {@code buy} units and receives one more free, so every free unit
+     * needs {@code buy} paid units alongside it. Only complete deals count — leftover units
+     * earn nothing. Each free unit is credited at that product's unit price.
+     */
+    public double bogoDiscount(int buy) {
+        double discount = 0.0;
+        for (Item item : items) {
+            int freeUnits = item.getQuantity() / buy;
+            discount += freeUnits * item.getUnitPrice();
+        }
+        return discount;
+    }
+
     public double total(double discountRate) {
         return subtotal() - discountRate;
     }

@@ -30,17 +30,6 @@ class CartTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void unitCountSumsQuantities() {
-        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5, even
-        // though there are only 2 lines.
-        Cart c = new Cart();
-        c.addItem("apple", 1.00, 2);
-        c.addItem("banana", 0.50, 3);
-        assertEquals(5, c.unitCount(),
-                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products (2)");
-    }
-
-    @Test
     void mostExpensiveComparesUnitPriceNotLineTotal() {
         // most_expensive returns the line with the highest UNIT price. A cheap item bought
         // in bulk must NOT outrank a single expensive one: gum is $1 each (x10) but steak is
@@ -138,9 +127,44 @@ class CartTest {
                 "a 50.00 subtotal should NOT qualify for a 60.00 threshold");
     }
 
+    @Test
+    void bogoDiscountCreditsOneFreeUnitPerDeal() {
+        // "Buy 2, get one free": the customer pays for 2 and takes home a 3rd. Three units
+        // is exactly one complete deal, so one unit is free.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50, 3);
+        assertEquals(0.50, c.bogoDiscount(2), 1e-9,
+                "3 units under a buy-2-get-one-free deal is one complete deal, so exactly one "
+                        + "0.50 unit is free");
+    }
+
+    @Test
+    void bogoDiscountNeedsPaidUnitsForEveryFreeOne() {
+        // Each free unit has to be accompanied by `buy` PAID units, so a deal consumes 3
+        // units in total. 6 units of gum is two complete deals (2 free), not three.
+        Cart c = new Cart();
+        c.addItem("gum", 1.00, 6);
+        c.addItem("steak", 9.00, 1);
+        c.addItem("candy", 0.50, 3);
+        assertEquals(2.50, c.bogoDiscount(2), 1e-9,
+                "6 gum is 2 free (not 3 — each free unit needs 2 paid ones beside it), 1 steak "
+                        + "earns nothing, and 3 candy is 1 free: 2.00 + 0.00 + 0.50 = 2.50");
+    }
+
     // -----------------------------------------------------------------------
     // Correct behavior (these pass out of the box — clean reference points)
     // -----------------------------------------------------------------------
+
+    @Test
+    void unitCountSumsQuantities() {
+        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5, even
+        // though there are only 2 lines.
+        Cart c = new Cart();
+        c.addItem("apple", 1.00, 2);
+        c.addItem("banana", 0.50, 3);
+        assertEquals(5, c.unitCount(),
+                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products (2)");
+    }
 
     @Test
     void addAndGetItem() {

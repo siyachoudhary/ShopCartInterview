@@ -74,8 +74,8 @@ mvn test                            # compiles and runs the tests
 
 There are **eight** planted bugs, and **none of them are loud** — there are no crashes or
 wildly-wrong values to point the way. Each is a plausible implementation that quietly does
-the wrong thing: think counting the wrong thing, comparing the wrong quantity, money that
-loses its cents, or a "merge" that overwrites instead of accumulating. The **docstring on
+the wrong thing: think comparing the wrong quantity, money that loses its cents, or a
+"merge" that overwrites instead of accumulating. The **docstring on
 each method states what it is supposed to do**, and most bugs are a mismatch between that
 description and the code — but don't assume it every time. A failing test does not always
 point at the method it is named for, and one root cause can redden more than one test.

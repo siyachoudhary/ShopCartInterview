@@ -3,14 +3,15 @@
 These describe the *intended* behavior. Fix the source in cart/cart.py until they all
 pass — do not change the tests.
 
-There are 6 planted bugs. None of them announce themselves with a crash or an obviously
-absurd value — every one is a plausible-looking implementation that quietly disagrees with
-the docstring. Read the method's docstring (it states the intended behavior), then read the
-code, and find the mismatch. The tests come in two waves:
+There are 8 planted bugs. None of them announce themselves with a crash or an obviously
+absurd value — every one is a plausible-looking implementation that quietly does the wrong
+thing. Read the method's docstring (it states the intended behavior), then read the code.
+Most bugs are a mismatch between those two, but don't assume it every time: a failing test
+does not always point at the method it is named for, and one root cause can redden more than
+one test. The tests come in two waves:
 
-  * Wave 1 — a careful read of the docstring is enough to spot the mismatch.
-  * Wave 2 — the bug only bites on an edge case (fractional money, a repeated product, or a
-    value that lands exactly on a boundary).
+  * Wave 1 — a careful read of the docstring is enough to spot the problem.
+  * Wave 2 — the bug only bites on a particular input or edge case.
 
 Each assertion carries a message describing the intended behavior.
 """
@@ -23,18 +24,6 @@ from cart import Cart
 # ---------------------------------------------------------------------------
 # Wave 1 — read the docstring carefully
 # ---------------------------------------------------------------------------
-
-def test_unit_count_sums_quantities():
-    # unit_count should count individual UNITS, not distinct products. Two products with
-    # quantities 2 and 3 means 5 units in the cart, even though there are only 2 lines.
-    c = Cart()
-    c.add_item("apple", 1.00, quantity=2)
-    c.add_item("banana", 0.50, quantity=3)
-    assert c.unit_count() == 5, (
-        "unit_count() should sum every line's quantity (2 + 3 = 5), not count the number "
-        "of distinct products (which would be 2)"
-    )
-
 
 def test_most_expensive_compares_unit_price_not_line_total():
     # most_expensive returns the line with the highest UNIT price. A cheap item bought in
@@ -95,6 +84,34 @@ def test_adding_same_product_accumulates_quantity():
     )
 
 
+def test_remove_cheaper_than_drops_every_cheap_line():
+    # Every line priced under the cutoff should go, however many there are. NOTE: the order
+    # these are added in is load-bearing for this test — keep candy and gum adjacent.
+    c = Cart()
+    c.add_item("candy", 0.50)
+    c.add_item("gum", 1.00)
+    c.add_item("steak", 9.00)
+    c.remove_cheaper_than(2.00)
+    assert sorted(item.name for item in c.items) == ["steak"], (
+        "remove_cheaper_than(2.00) should drop EVERY line under 2.00 (both candy and gum), "
+        "leaving only steak"
+    )
+
+
+def test_subtotal_reflects_pruned_lines():
+    # After pruning, the subtotal should reflect only the lines that survived. NOTE: the
+    # order these are added in is load-bearing for this test — keep candy and gum adjacent.
+    c = Cart()
+    c.add_item("candy", 0.50)
+    c.add_item("gum", 1.00)
+    c.add_item("steak", 9.00)
+    c.remove_cheaper_than(2.00)
+    assert c.subtotal() == 9.00, (
+        "after dropping every line under 2.00 only the 9.00 steak should remain, so the "
+        "subtotal is 9.00"
+    )
+
+
 def test_free_shipping_is_inclusive_at_the_threshold():
     # Free shipping kicks in once the subtotal REACHES the threshold. A subtotal exactly
     # equal to the threshold must qualify.
@@ -107,9 +124,45 @@ def test_free_shipping_is_inclusive_at_the_threshold():
     assert c.free_shipping(60.00) is False, "a 50.00 subtotal should NOT qualify for a 60.00 threshold"
 
 
+def test_bogo_discount_credits_one_free_unit_per_deal():
+    # "Buy 2, get one free": the customer pays for 2 and takes home a 3rd. Three units is
+    # exactly one complete deal, so one unit is free.
+    c = Cart()
+    c.add_item("candy", 0.50, quantity=3)
+    assert c.bogo_discount(2) == 0.50, (
+        "3 units under a buy-2-get-one-free deal is one complete deal, so exactly one "
+        "0.50 unit is free"
+    )
+
+
+def test_bogo_discount_needs_paid_units_for_every_free_one():
+    # Each free unit has to be accompanied by `buy` PAID units, so a deal consumes 3 units
+    # in total. 6 units of gum is two complete deals (2 free), not three.
+    c = Cart()
+    c.add_item("gum", 1.00, quantity=6)
+    c.add_item("steak", 9.00, quantity=1)
+    c.add_item("candy", 0.50, quantity=3)
+    assert c.bogo_discount(2) == 2.50, (
+        "6 gum is 2 free (not 3 — each free unit needs 2 paid ones beside it), 1 steak "
+        "earns nothing, and 3 candy is 1 free: 2.00 + 0.00 + 0.50 = 2.50"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Correct behavior (these pass out of the box — clean reference points)
 # ---------------------------------------------------------------------------
+
+def test_unit_count_sums_quantities():
+    # unit_count should count individual UNITS, not distinct products. Two products with
+    # quantities 2 and 3 means 5 units in the cart, even though there are only 2 lines.
+    c = Cart()
+    c.add_item("apple", 1.00, quantity=2)
+    c.add_item("banana", 0.50, quantity=3)
+    assert c.unit_count() == 5, (
+        "unit_count() should sum every line's quantity (2 + 3 = 5), not count the number "
+        "of distinct products (which would be 2)"
+    )
+
 
 def test_add_and_get_item():
     c = Cart()

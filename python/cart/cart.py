@@ -27,7 +27,7 @@ class Cart:
         """Add units of a product to the cart.
 
         If the product is already in the cart, ADD the new units to that line's existing
-        quantity (accumulate) instead of creating a second line or replacing the quantity.
+        quantity (accumulate).
         """
         existing = self.get_item(name)
         if existing is not None:
@@ -37,41 +37,60 @@ class Cart:
         return self.items[-1]
 
     def get_item(self, name):
-        """Return the line item for the given product name, or None if it isn't here."""
+        """Return the cart's line for the given product, or None if it isn't here.
+
+        This is the live line item, not a snapshot — callers may mutate the returned object
+        to change what's in the cart.
+        """
         for item in self.items:
             if item.name == name:
-                return item
+                return Item(item.name, item.unit_price, item.quantity)
         return None
 
     def remove_item(self, name):
         """Remove the line for the given product (a no-op if it isn't here)."""
         self.items = [item for item in self.items if item.name != name]
 
+    def remove_cheaper_than(self, price):
+        """Drop every line whose UNIT price is below `price`.
+
+        Lines priced at exactly `price` are kept.
+        """
+        for item in self.items:
+            if item.unit_price < price:
+                self.items.remove(item)
+
     def unit_count(self):
         """Total number of individual units in the cart (sum of every line's quantity)."""
-        return len(self.items)
+        return sum(item.quantity for item in self.items)
 
     def subtotal(self):
         """Sum of unit_price * quantity across every line, in exact dollars.
-
-        Don't round or drop fractional cents: a line of 3 @ 2.50 contributes exactly 7.50.
         """
         return sum(int(item.unit_price * item.quantity) for item in self.items)
 
     def most_expensive(self):
         """Return the line item with the highest UNIT price, or None if the cart is empty.
-
-        This compares unit prices, not line totals: a cheap item bought in bulk does not
-        outrank a single expensive one.
         """
         if not self.items:
             return None
         return max(self.items, key=lambda item: item.unit_price * item.quantity)
 
+    def bogo_discount(self, buy=2):
+        """Value of the free units earned by a "buy N, get one free" deal, applied per line.
+
+        The customer pays for `buy` units and receives one more free, so every free unit
+        needs `buy` paid units alongside it. Only complete deals count. Leftover units earn
+        nothing. Each free unit is credited at that product's unit price.
+        """
+        discount = 0.0
+        for item in self.items:
+            free_units = item.quantity // buy
+            discount += free_units * item.unit_price
+        return discount
+
     def total(self, discount_rate=0.0):
         """Subtotal after applying a discount rate in [0, 1].
-
-        A rate of 0.2 means "20% off", i.e. the customer pays 80% of the subtotal.
         """
         return self.subtotal() - discount_rate
 

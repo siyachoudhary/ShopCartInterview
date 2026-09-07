@@ -11,14 +11,15 @@ import org.junit.jupiter.api.Test;
  * Behavioral tests for ShopCart. These describe the *intended* behavior.
  * Fix the source in Cart.java until they all pass — do not change the tests.
  *
- * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
- * absurd value — every one is a plausible-looking implementation that quietly disagrees with
- * the Javadoc. Read the method's Javadoc (it states the intended behavior), then read the
- * code, and find the mismatch. The tests come in two waves:
+ * There are 8 planted bugs. None of them announce themselves with a crash or an obviously
+ * absurd value — every one is a plausible-looking implementation that quietly does the wrong
+ * thing. Read the method's Javadoc (it states the intended behavior), then read the code.
+ * Most bugs are a mismatch between those two, but don't assume it every time: a failing test
+ * does not always point at the method it is named for, and one root cause can redden more
+ * than one test. The tests come in two waves:
  *
- *   - Wave 1: a careful read of the Javadoc is enough to spot the mismatch.
- *   - Wave 2: the bug only bites on an edge case (fractional money, a repeated product, or a
- *     value that lands exactly on a boundary).
+ *   - Wave 1: a careful read of the Javadoc is enough to spot the problem.
+ *   - Wave 2: the bug only bites on a particular input or edge case.
  *
  * Each assertion carries a message describing the intended behavior.
  */
@@ -27,17 +28,6 @@ class CartTest {
     // -----------------------------------------------------------------------
     // Wave 1 — read the Javadoc carefully
     // -----------------------------------------------------------------------
-
-    @Test
-    void unitCountSumsQuantities() {
-        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5, even
-        // though there are only 2 lines.
-        Cart c = new Cart();
-        c.addItem("apple", 1.00, 2);
-        c.addItem("banana", 0.50, 3);
-        assertEquals(5, c.unitCount(),
-                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products (2)");
-    }
 
     @Test
     void mostExpensiveComparesUnitPriceNotLineTotal() {
@@ -97,6 +87,35 @@ class CartTest {
     }
 
     @Test
+    void removeCheaperThanDropsEveryCheapLine() {
+        // Every line priced under the cutoff should go, however many there are. NOTE: the
+        // order these are added in is load-bearing — keep candy and gum adjacent.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50);
+        c.addItem("gum", 1.00);
+        c.addItem("steak", 9.00);
+        c.removeCheaperThan(2.00);
+        assertEquals(1, c.getItems().size(),
+                "removeCheaperThan(2.00) should drop EVERY line under 2.00 (both candy and gum), "
+                        + "leaving only steak");
+        assertEquals("steak", c.getItems().get(0).getName(), "the surviving line should be 'steak'");
+    }
+
+    @Test
+    void subtotalReflectsPrunedLines() {
+        // After pruning, the subtotal should reflect only the lines that survived. NOTE: the
+        // order these are added in is load-bearing — keep candy and gum adjacent.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50);
+        c.addItem("gum", 1.00);
+        c.addItem("steak", 9.00);
+        c.removeCheaperThan(2.00);
+        assertEquals(9.00, c.subtotal(), 1e-9,
+                "after dropping every line under 2.00 only the 9.00 steak should remain, so the "
+                        + "subtotal is 9.00");
+    }
+
+    @Test
     void freeShippingIsInclusiveAtThreshold() {
         // Free shipping kicks in once the subtotal REACHES the threshold; exactly equal must
         // qualify.
@@ -108,9 +127,44 @@ class CartTest {
                 "a 50.00 subtotal should NOT qualify for a 60.00 threshold");
     }
 
+    @Test
+    void bogoDiscountCreditsOneFreeUnitPerDeal() {
+        // "Buy 2, get one free": the customer pays for 2 and takes home a 3rd. Three units
+        // is exactly one complete deal, so one unit is free.
+        Cart c = new Cart();
+        c.addItem("candy", 0.50, 3);
+        assertEquals(0.50, c.bogoDiscount(2), 1e-9,
+                "3 units under a buy-2-get-one-free deal is one complete deal, so exactly one "
+                        + "0.50 unit is free");
+    }
+
+    @Test
+    void bogoDiscountNeedsPaidUnitsForEveryFreeOne() {
+        // Each free unit has to be accompanied by `buy` PAID units, so a deal consumes 3
+        // units in total. 6 units of gum is two complete deals (2 free), not three.
+        Cart c = new Cart();
+        c.addItem("gum", 1.00, 6);
+        c.addItem("steak", 9.00, 1);
+        c.addItem("candy", 0.50, 3);
+        assertEquals(2.50, c.bogoDiscount(2), 1e-9,
+                "6 gum is 2 free (not 3 — each free unit needs 2 paid ones beside it), 1 steak "
+                        + "earns nothing, and 3 candy is 1 free: 2.00 + 0.00 + 0.50 = 2.50");
+    }
+
     // -----------------------------------------------------------------------
     // Correct behavior (these pass out of the box — clean reference points)
     // -----------------------------------------------------------------------
+
+    @Test
+    void unitCountSumsQuantities() {
+        // unitCount should count individual UNITS, not distinct products: 2 + 3 = 5, even
+        // though there are only 2 lines.
+        Cart c = new Cart();
+        c.addItem("apple", 1.00, 2);
+        c.addItem("banana", 0.50, 3);
+        assertEquals(5, c.unitCount(),
+                "unitCount() should sum every line's quantity (2 + 3 = 5), not count distinct products (2)");
+    }
 
     @Test
     void addAndGetItem() {

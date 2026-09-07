@@ -7,7 +7,7 @@ in.
 
 The interview is really **one main task with an optional bonus**:
 
-1. **Debugging (the whole interview)** — The library ships with a failing test suite. Six
+1. **Debugging (the whole interview)** — The library ships with a failing test suite. Eight
    bugs have been planted. Find and fix them until the tests are green. None of them are
    one-liners that scream at you — they're the kind of plausible-looking code that quietly
    does the wrong thing, so take your time and reason carefully.
@@ -25,8 +25,9 @@ hypotheses, verify them, and communicate as you go. **Think out loud.**
 
 A tiny in-memory shopping cart. A cart holds "line items" — one line per distinct product,
 each with a `unit_price` and a `quantity`. The `Cart` class lets you add items (merging
-duplicates), look them up, remove them, count units, compute the subtotal, find the
-priciest item, apply a discount, and check free-shipping eligibility.
+duplicates), look them up, remove them, prune the ones under a price cutoff, count units,
+compute the subtotal, find the priciest item, apply a discount, and check free-shipping
+eligibility.
 
 The two implementations behave identically — same classes, same methods, same bugs.
 
@@ -57,8 +58,8 @@ mvn test                            # compiles and runs the tests
 ```
 
 > Tip: run a single test while iterating.
-> - Python: `python -m pytest tests/test_cart.py::test_subtotal_multiplies_price_by_quantity -v`
-> - Java: `mvn -Dtest=CartTest#subtotalMultipliesPriceByQuantity test`
+> - Python: `python -m pytest tests/test_cart.py::test_subtotal_keeps_fractional_cents -v`
+> - Java: `mvn -Dtest=CartTest#subtotalKeepsFractionalCents test`
 
 ---
 
@@ -71,17 +72,16 @@ mvn test                            # compiles and runs the tests
    method's docstring/Javadoc states what it should do — and fix the bugs.
 4. Re-run until everything is green.
 
-There are **six** planted bugs, and **none of them are loud** — there are no crashes or
-wildly-wrong values to point the way. Each is a plausible implementation that quietly
-disagrees with the method's docstring: think counting the wrong thing, comparing the wrong
-quantity, money that loses its cents, a "merge" that overwrites instead of accumulating, or
-a comparison that's off by an inclusive boundary. The **docstring on each method states
-what it is supposed to do** — the bug is always a mismatch between that description and the
-code.
+There are **eight** planted bugs, and **none of them are loud** — there are no crashes or
+wildly-wrong values to point the way. Each is a plausible implementation that quietly does
+the wrong thing: think comparing the wrong quantity, money that loses its cents, or a
+"merge" that overwrites instead of accumulating. The **docstring on
+each method states what it is supposed to do**, and most bugs are a mismatch between that
+description and the code — but don't assume it every time. A failing test does not always
+point at the method it is named for, and one root cause can redden more than one test.
 
 The tests come in two waves: *Wave 1* is catchable from a careful read of the docstring;
-*Wave 2* only bites on an edge case (fractional money, a repeated product, or a value that
-lands exactly on a boundary). Fix the source, **not** the tests.
+*Wave 2* only bites on a particular input or edge case. Fix the source, **not** the tests.
 
 **As you work, tell us:** what does the failing test expect, what did you observe, what's
 your hypothesis, and how did the fix confirm it?

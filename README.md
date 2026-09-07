@@ -7,7 +7,7 @@ in.
 
 The interview is really **one main task with an optional bonus**:
 
-1. **Debugging (the whole interview)** — The library ships with a failing test suite. Six
+1. **Debugging (the whole interview)** — The library ships with a failing test suite. Eight
    bugs have been planted. Find and fix them until the tests are green. None of them are
    one-liners that scream at you — they're the kind of plausible-looking code that quietly
    does the wrong thing, so take your time and reason carefully.

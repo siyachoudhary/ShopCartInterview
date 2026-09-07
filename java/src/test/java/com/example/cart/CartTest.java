@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  * Behavioral tests for ShopCart. These describe the *intended* behavior.
  * Fix the source in Cart.java until they all pass — do not change the tests.
  *
- * There are 6 planted bugs. None of them announce themselves with a crash or an obviously
+ * There are 8 planted bugs. None of them announce themselves with a crash or an obviously
  * absurd value — every one is a plausible-looking implementation that quietly does the wrong
  * thing. Read the method's Javadoc (it states the intended behavior), then read the code.
  * Most bugs are a mismatch between those two, but don't assume it every time: a failing test

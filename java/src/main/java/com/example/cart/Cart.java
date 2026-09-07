@@ -109,10 +109,6 @@ public class Cart {
     }
 
     /**
-     * Subtotal after applying a discount rate in [0, 1]. A rate of 0.2 means "20% off",
-     * i.e. the customer pays 80% of the subtotal.
-     */
-    /**
      * Value of the free units earned by a "buy N, get one free" deal, applied per line. The
      * customer pays for {@code buy} units and receives one more free, so every free unit
      * needs {@code buy} paid units alongside it. Only complete deals count — leftover units
@@ -127,6 +123,10 @@ public class Cart {
         return discount;
     }
 
+    /**
+     * Subtotal after applying a discount rate in [0, 1]. A rate of 0.2 means "20% off",
+     * i.e. the customer pays 80% of the subtotal.
+     */
     public double total(double discountRate) {
         return subtotal() - discountRate;
     }
